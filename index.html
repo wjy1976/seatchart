@@ -31,7 +31,7 @@
         }
         /* Card hover effect */
         .cadre-card {
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s;
         }
         .cadre-card:hover {
             transform: translateY(-2px);
@@ -70,7 +70,7 @@
         <div class="max-w-[1000px] mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
             <div>
                 <h1 class="text-xl font-bold text-gray-800">互動式班級座位表</h1>
-                <p class="text-gray-500 text-xs mt-0.5">拖曳座位交換位置，已優化 A4 直印尺寸</p>
+                <p class="text-gray-500 text-xs mt-0.5">拖曳名單排座位與幹部，點擊標題可輸入班級名稱</p>
             </div>
             
             <div class="flex flex-wrap gap-2 justify-center">
@@ -118,9 +118,9 @@
                 
                 <!-- Left Sidebar: Class Members -->
                 <div class="w-[160px] bg-gray-50 p-3 rounded-lg border border-gray-200 flex flex-col shrink-0" id="sidebar-dropzone">
-                    <h2 class="text-base font-bold text-gray-800 mb-2 border-b-2 border-gray-300 pb-2 text-center">班級成員</h2>
-                    <p class="text-[10px] text-gray-500 text-center mb-2 leading-tight">拖曳名單排座位<br>雙擊座位可清空</p>
-                    <div class="flex justify-start border-b border-gray-300 pb-2 text-xs font-bold text-gray-600 mb-2 px-2">
+                    <h2 class="text-base font-bold text-gray-800 mb-2 border-b-2 border-gray-300 pb-2 text-center pointer-events-none">班級成員</h2>
+                    <p class="text-[10px] text-gray-500 text-center mb-2 leading-tight pointer-events-none">拖曳排位與指派幹部<br>雙擊座位可清空</p>
+                    <div class="flex justify-start border-b border-gray-300 pb-2 text-xs font-bold text-gray-600 mb-2 px-2 pointer-events-none">
                         <span class="w-6 text-center">座號</span><span class="ml-3">姓名</span>
                     </div>
                     <div id="name-list-container" class="flex flex-col gap-0 overflow-visible flex-1">
@@ -135,7 +135,11 @@
                     <!-- Section 1: Seating Chart -->
                     <!-- Height controlled by JS settings -->
                     <div id="seating-section" class="bg-white border-2 border-gray-200 rounded-lg p-3 relative flex flex-col items-center justify-center overflow-hidden" style="height: 75%; flex: none;">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-3 text-center w-full shrink-0">沙鹿高工  化工一乙 座位表</h2>
+                        <!-- Editable Class Name Title -->
+                        <h2 class="text-2xl font-bold text-gray-800 mb-3 text-center w-full shrink-0 pointer-events-none relative z-20">
+                            <span id="class-name-editable" contenteditable="true" class="pointer-events-auto outline-none border-b-2 border-transparent hover:border-gray-400 focus:border-blue-500 transition-colors empty:before:content-['(點此輸入班級)'] empty:before:text-gray-400 cursor-text inline-block min-w-[2rem]" onblur="saveClassName(this.innerText)"></span>
+                            座位表
+                        </h2>
                         
                         <!-- Grid container -->
                         <div id="seating-grid-container" class="w-full flex-1 flex items-center justify-center px-1 overflow-hidden">
@@ -145,8 +149,8 @@
                             </div>
                         </div>
 
-                        <!-- Podium (Larger and Taller) -->
-                        <div class="text-center mt-4 mb-1 w-full shrink-0">
+                        <!-- Podium -->
+                        <div class="text-center mt-4 mb-1 w-full shrink-0 pointer-events-none">
                             <span class="inline-block w-3/5 py-3 bg-gray-700 text-white rounded-lg text-2xl font-bold shadow-md border-2 border-gray-600 tracking-[0.5em]">
                                 講 台
                             </span>
@@ -156,7 +160,9 @@
                     <!-- Section 2: Class Cadres -->
                     <!-- Flex-1 ensures it takes remaining height -->
                     <div id="cadre-section" class="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 flex flex-col flex-1">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center border-b-2 border-gray-300 pb-2 shrink-0">班級幹部</h2>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center border-b-2 border-gray-300 pb-2 shrink-0 pointer-events-none">
+                            <span id="cadre-class-name-display"></span>班級幹部
+                        </h2>
                         
                         <!-- Grid Layout for Cards -->
                         <div class="grid gap-3 flex-1 content-start" id="cadre-container" style="grid-template-columns: repeat(7, minmax(0, 1fr));">
@@ -216,6 +222,7 @@
         </div>
     </div>
 
+    <!-- Display Settings Modal -->
     <div id="settings-modal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
         <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="closeDisplaySettings()"></div>
         <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto max-h-[90vh]">
@@ -237,7 +244,6 @@
                                     <span id="total-height-val">1150px</span>
                                 </label>
                                 <input type="range" min="800" max="1500" step="50" value="1150" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="updateTotalHeight(this.value)">
-                                <p class="text-xs text-gray-500 mt-1">調整數值以符合 A4 紙張長度 (建議 1150px 左右)</p>
                             </div>
                             <div>
                                 <label class="flex justify-between text-sm font-medium text-gray-700">
@@ -245,14 +251,12 @@
                                     <span id="section-height-val">75%</span>
                                 </label>
                                 <input type="range" min="20" max="90" step="5" value="75" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500" oninput="updateSeatingHeightPercent(this.value)">
-                                <p class="text-xs text-gray-500 mt-1">調整座位表高度，剩餘空間分配給幹部區</p>
                             </div>
                         </div>
                     </div>
                     <div>
                         <h3 class="font-bold text-blue-600 mb-2 border-b pb-1">座位表內容</h3>
                         <div class="space-y-3">
-                            <!-- NEW: Row/Column Settings -->
                             <div class="flex gap-4">
                                 <div class="flex-1">
                                     <label class="flex justify-between text-sm font-medium text-gray-700">
@@ -269,8 +273,6 @@
                                     <input type="range" min="3" max="10" value="6" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="updateSeatingCols(this.value)">
                                 </div>
                             </div>
-                            <!-- END NEW -->
-
                             <div>
                                 <label class="flex justify-between text-sm font-medium text-gray-700">
                                     <span>網格寬度 (卡片大小)</span>
@@ -307,9 +309,9 @@
                             <div>
                                 <label class="flex justify-between text-sm font-medium text-gray-700">
                                     <span>幹部字體大小</span>
-                                    <span id="cadre-font-val">1.2rem</span>
+                                    <span id="cadre-font-val">0.9rem</span>
                                 </label>
-                                <input type="range" min="0.8" max="2.0" step="0.1" value="1.2" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="updateCadreFontSize(this.value)">
+                                <input type="range" min="0.5" max="2.0" step="0.1" value="0.9" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="updateCadreFontSize(this.value)">
                             </div>
                         </div>
                     </div>
@@ -322,7 +324,7 @@
     </div>
 
     <script>
-        // --- Modal Control Functions (MOVED TO TOP TO PREVENT REFERENCE ERRORS) ---
+        // --- Modal Control Functions ---
         function openDisplaySettings() { 
             document.getElementById('settings-modal').classList.remove('opacity-0', 'pointer-events-none'); 
             document.body.classList.add('modal-active'); 
@@ -343,7 +345,7 @@
             document.body.classList.remove('modal-active'); 
         }
         
-        // --- Settings Update Functions (MOVED TO TOP TO PREVENT REFERENCE ERRORS) ---
+        // --- Settings Update Functions ---
         function updateTotalHeight(val) {
             settings.totalHeight = val;
             document.getElementById('total-height-val').innerText = val + 'px';
@@ -384,11 +386,9 @@
             const names = document.querySelectorAll('.cadre-name');
             names.forEach(el => el.style.fontSize = val + 'rem');
         }
-        
         function updateLayoutSize(newRows, newCols) {
             const oldRows = currentLayout.length;
             const oldCols = currentLayout[0] ? currentLayout[0].length : 0;
-            
             const newLayout = [];
             for (let r = 0; r < newRows; r++) {
                 newLayout[r] = [];
@@ -400,39 +400,34 @@
                     }
                 }
             }
-            
             currentLayout = newLayout;
             settings.seatingRows = newRows;
             settings.seatingCols = newCols;
-
             saveData();
             renderGrid();
         }
-
         function updateSeatingRows(val) {
             const newRows = parseInt(val);
             document.getElementById('seating-rows-val').innerText = newRows;
             updateLayoutSize(newRows, settings.seatingCols);
         }
-
         function updateSeatingCols(val) {
             const newCols = parseInt(val);
             document.getElementById('seating-cols-val').innerText = newCols;
             updateLayoutSize(settings.seatingRows, newCols);
         }
 
-
         // --- Settings State ---
         const settings = {
             totalHeight: 1150,
-            seatingHeightPercent: 75, // Defaulted to 75% for smaller cadre area
-            seatingRows: 6, // NEW Default
-            seatingCols: 6, // NEW Default
+            seatingHeightPercent: 75,
+            seatingRows: 6,
+            seatingCols: 6,
             seatingWidth: 100,
             seatingFontSize: 1.25,
             cadreCols: 7,
             cadreHeight: 4,
-            cadreFontSize: 1.2
+            cadreFontSize: 0.9 
         };
 
         // --- Data ---
@@ -454,22 +449,21 @@
             { title: "環評", id: 17, name: "陳科宏" }, { title: "節能", id: 23, name: "詹宸睿" },
             { title: "資訊", id: 19, name: "彭正鈜" }, { title: "環保", id: 25, name: "潘尚恩" }
         ];
-        // The last corrected layout matrix (6x6)
         const initialLayout = [
             [3, 16, 25, 15, 24, 7], [20, 23, 30, 12, 18, 11], [35, 17, 32, 21, 10, 34],
             [2, 14, 31, 28, 22, 19], [9, 27, 33, 6, 8, 4], [29, 26, 13, 1, 5, 'X']
         ];
 
         let students = {}, roles = [], currentLayout = [];
+        let currentClassName = "";
 
         function loadData() {
             students = JSON.parse(localStorage.getItem('seatingChart_students')) || JSON.parse(JSON.stringify(defaultStudents));
             roles = JSON.parse(localStorage.getItem('seatingChart_roles')) || JSON.parse(JSON.stringify(defaultRoles));
             
-            // Load layout settings and matrix
             settings.seatingRows = parseInt(localStorage.getItem('seatingChart_rows')) || 6;
             settings.seatingCols = parseInt(localStorage.getItem('seatingChart_cols')) || 6;
-            settings.seatingHeightPercent = parseInt(localStorage.getItem('seatingChart_height_percent')) || 75; // Load new setting
+            settings.seatingHeightPercent = parseInt(localStorage.getItem('seatingChart_height_percent')) || 75; 
 
             const storedLayout = localStorage.getItem('seatingChart_layout');
             if (storedLayout) {
@@ -478,32 +472,66 @@
                  currentLayout = JSON.parse(JSON.stringify(initialLayout));
             }
             
-            // Apply loaded height setting immediately
             document.getElementById('seating-section').style.height = settings.seatingHeightPercent + '%';
+
+            // Load Class Name
+            currentClassName = localStorage.getItem('seatingChart_className') || "";
+            document.getElementById('class-name-editable').innerText = currentClassName;
+            updateCadreTitleDisplay();
         }
+        
         function saveData() {
             localStorage.setItem('seatingChart_students', JSON.stringify(students));
             localStorage.setItem('seatingChart_roles', JSON.stringify(roles));
             localStorage.setItem('seatingChart_layout', JSON.stringify(currentLayout));
             localStorage.setItem('seatingChart_rows', settings.seatingRows);
             localStorage.setItem('seatingChart_cols', settings.seatingCols);
-            localStorage.setItem('seatingChart_height_percent', settings.seatingHeightPercent); // Save new setting
+            localStorage.setItem('seatingChart_height_percent', settings.seatingHeightPercent); 
+        }
+
+        function saveClassName(val) {
+            currentClassName = val.trim();
+            localStorage.setItem('seatingChart_className', currentClassName);
+            updateCadreTitleDisplay();
+        }
+
+        function updateCadreTitleDisplay() {
+            const displaySpan = document.getElementById('cadre-class-name-display');
+            if (displaySpan) {
+                displaySpan.innerText = currentClassName ? `${currentClassName} ` : "";
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             loadData(); renderGrid(); renderNameList(); renderCadreCards();
+
+            // Prevent Enter key from making newlines in title
+            document.getElementById('class-name-editable').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.blur();
+                }
+            });
         });
 
-        // --- Standard Functions (mostly unchanged) ---
+        // --- Standard Actions ---
+        function clearAllSeats() {
+            if(confirm("確定要清空所有座位嗎？這將讓所有人回到待排區。")) {
+                for(let r=0; r<currentLayout.length; r++) {
+                    for(let c=0; c<currentLayout[r].length; c++) {
+                        currentLayout[r][c] = 'X';
+                    }
+                }
+                saveData(); renderGrid(); renderNameList(); renderCadreCards();
+            }
+        }
 
         function resetToDefault() {
-            if(confirm("確定要重置所有設定（包含名單修改）到預設狀態嗎？\n注意：這會清除您所有的自訂修改。")) {
+            if(confirm("確定要重置所有設定（包含名單與幹部修改）到預設狀態嗎？\n注意：這會清除您所有的自訂修改。")) {
                 localStorage.clear(); 
                 loadData(); 
-                // Reset size sliders too
                 document.getElementById('seating-rows-val').innerText = 6;
                 document.getElementById('seating-cols-val').innerText = 6;
-                
                 renderGrid(); renderNameList(); renderCadreCards();
             }
         }
@@ -514,13 +542,29 @@
             const originalText = btn.innerHTML;
             btn.innerHTML = `處理中...`;
             btn.disabled = true;
+
+            // Handle title placeholder before export
+            const editableSpan = document.getElementById('class-name-editable');
+            const originalTitle = editableSpan.innerText;
+            if (!originalTitle.trim()) {
+                editableSpan.innerText = " "; // Hide placeholder
+            }
+
             html2canvas(captureElement, {
                 scale: 3, backgroundColor: "#ffffff", logging: false, useCORS: true,
                 onclone: (clonedDoc) => { clonedDoc.body.style.fontFamily = '"Microsoft JhengHei", "Heiti TC", "Noto Sans TC", sans-serif'; }
             }).then(canvas => {
-                const link = document.createElement('a'); link.download = '班級座位表_A4.png'; link.href = canvas.toDataURL(); link.click();
+                const link = document.createElement('a'); 
+                const classNamePrefix = currentClassName ? currentClassName + '_' : '';
+                link.download = classNamePrefix + '班級座位表_A4.png'; 
+                link.href = canvas.toDataURL(); link.click();
                 btn.innerHTML = originalText; btn.disabled = false;
-            }).catch(err => { console.error("Export failed:", err); alert("匯出失敗，請稍後再試。"); btn.innerHTML = originalText; btn.disabled = false; });
+                if (!originalTitle.trim()) editableSpan.innerText = ""; // Restore empty state
+            }).catch(err => { 
+                console.error("Export failed:", err); alert("匯出失敗，請稍後再試。"); 
+                btn.innerHTML = originalText; btn.disabled = false; 
+                if (!originalTitle.trim()) editableSpan.innerText = ""; // Restore empty state
+            });
         }
 
         function switchTab(tabName) {
@@ -529,17 +573,33 @@
             document.getElementById('tab-' + tabName).classList.remove('hidden'); event.target.classList.remove('border-transparent', 'text-gray-500'); event.target.classList.add('border-blue-500', 'text-blue-500');
         }
 
-        // Render Functions
+        // --- Render Functions ---
         function renderCadreCards() {
             const container = document.getElementById('cadre-container'); container.innerHTML = '';
             container.style.gridTemplateColumns = `repeat(${settings.cadreCols}, minmax(0, 1fr))`;
             
-            roles.forEach(role => {
+            roles.forEach((role, index) => {
                 const card = document.createElement('div');
-                card.className = "cadre-card bg-white border-2 border-gray-200 rounded p-2 text-center flex flex-col justify-center items-center shadow-sm";
+                card.className = "cadre-card relative bg-white border-2 border-gray-200 rounded p-1.5 text-center flex flex-col justify-center items-center shadow-sm";
                 card.style.minHeight = settings.cadreHeight + 'rem';
-                const studentName = students[role.id] || role.name || "未知";
-                card.innerHTML = `<div class="text-lg text-gray-700 font-extrabold leading-normal w-full truncate mb-1 pb-1 border-b border-gray-100">${role.title}</div><div class="cadre-name text-blue-900 flex flex-col items-center justify-center gap-0 w-full leading-normal pt-1 pb-1 font-extrabold" style="font-size: ${settings.cadreFontSize}rem"><span class="text-gray-500 text-sm font-bold">${role.id}</span><span class="truncate w-full px-1 pb-1">${studentName}</span></div>`;
+                card.dataset.roleIndex = index; 
+                
+                const studentIdStr = role.id ? role.id : "";
+                const studentName = role.id ? (students[role.id] || role.name || "未知") : "<span class='text-gray-400'>未指派</span>";
+                
+                card.innerHTML = `
+                    <div class="pointer-events-none text-sm text-gray-700 font-extrabold leading-normal w-full truncate border-b border-gray-100 pb-0.5 mb-0.5">${role.title}</div>
+                    <div class="pointer-events-none cadre-name text-blue-900 flex flex-col items-center justify-center gap-0 w-full leading-normal font-extrabold" style="font-size: ${settings.cadreFontSize}rem">
+                        <span class="pointer-events-none text-gray-500 text-xs font-bold">${studentIdStr}</span>
+                        <span class="pointer-events-none truncate w-full px-1">${studentName}</span>
+                    </div>
+                `;
+
+                card.addEventListener('dragover', handleCadreDragOver);
+                card.addEventListener('dragenter', handleCadreDragEnter);
+                card.addEventListener('dragleave', handleCadreDragLeave);
+                card.addEventListener('drop', handleCadreDrop);
+
                 container.appendChild(card);
             });
         }
@@ -547,13 +607,11 @@
         function renderNameList() {
             const container = document.getElementById('name-list-container'); container.innerHTML = '';
             
-            // 設定左側名單區的拖曳接收事件
             const sidebarZone = document.getElementById('sidebar-dropzone');
             sidebarZone.ondragover = handleSidebarDragOver;
             sidebarZone.ondrop = handleSidebarDrop;
             sidebarZone.ondragenter = (e) => e.preventDefault();
 
-            // 取得目前已經在座位表上的學生名單，用來改變樣式
             const seatedSet = new Set();
             currentLayout.forEach(row => {
                 row.forEach(seat => {
@@ -566,7 +624,6 @@
                 const item = document.createElement('div');
                 const isSeated = seatedSet.has(i);
                 
-                // 依照入座狀態套用不同樣式
                 const baseClass = "flex justify-start items-center px-2 py-1 rounded cursor-pointer transition-colors border-b border-gray-200 last:border-0 leading-normal";
                 if(isSeated) {
                     item.className = `${baseClass} bg-gray-100 opacity-40 hover:bg-gray-200 grayscale`;
@@ -574,46 +631,42 @@
                     item.className = `${baseClass} bg-white hover:bg-blue-50 shadow-sm border border-gray-100 my-0.5`;
                 }
 
-                // 讓名單可以拖曳
                 item.draggable = true;
                 item.dataset.studentId = i;
                 item.addEventListener('dragstart', handleSidebarDragStart);
-
                 item.onclick = () => highlightSeat(i);
-                item.innerHTML = `<span class="font-extrabold text-gray-500 w-8 text-center text-sm">${i}</span><span class="font-extrabold ${isSeated ? 'text-gray-500' : 'text-gray-900'} text-left text-sm ml-4 tracking-wide pb-1">${students[i]}</span>`;
+                
+                item.innerHTML = `<span class="pointer-events-none font-extrabold text-gray-500 w-8 text-center text-sm">${i}</span><span class="pointer-events-none font-extrabold ${isSeated ? 'text-gray-500' : 'text-gray-900'} text-left text-sm ml-4 tracking-wide pb-1">${students[i]}</span>`;
                 container.appendChild(item);
             });
         }
 
         function renderGrid() {
             const grid = document.getElementById('seating-grid'); grid.innerHTML = '';
-            
-            // Apply dynamic column count and styling
             grid.style.gridTemplateColumns = `repeat(${settings.seatingCols}, minmax(0, 1fr))`;
             
-            // Filter layout to match current settings
             const renderedLayout = currentLayout.slice(0, settings.seatingRows);
             
             renderedLayout.forEach((row, rowIndex) => {
-                const rowData = row.slice(0, settings.seatingCols); // Trim columns
+                const rowData = row.slice(0, settings.seatingCols);
                 rowData.forEach((seatId, colIndex) => {
                     const cell = document.createElement('div');
                     cell.className = `seat relative flex flex-col items-center justify-center p-0.5 rounded-lg border-2 shadow-sm select-none h-full w-full bg-white transition-all duration-200`;
                     
                     if (seatId === 'X') {
                         cell.classList.add('seat-x', 'bg-red-50', 'border-red-200');
-                        cell.innerHTML = `<span class="text-3xl font-extrabold text-red-800 leading-normal pb-1">X</span><span class="text-sm font-bold text-red-700 leading-normal pb-1">空位</span>`;
+                        cell.innerHTML = `<span class="pointer-events-none text-3xl font-extrabold text-red-800 leading-normal pb-1">X</span><span class="pointer-events-none text-sm font-bold text-red-700 leading-normal pb-1">空位</span>`;
                     } else {
                         const name = students[seatId] || "未知";
                         cell.classList.add('bg-blue-50', 'border-blue-200', 'text-blue-900', 'hover:bg-blue-100', 'hover:border-blue-400', 'hover:shadow-md');
-                        cell.innerHTML = `<span class="text-3xl font-extrabold leading-normal pt-1">${seatId}</span><span class="seat-name text-center w-full leading-normal pb-1 px-0.5 tracking-tight overflow-hidden font-extrabold" style="font-size: ${settings.seatingFontSize}rem">${name}</span>`;
+                        cell.innerHTML = `<span class="pointer-events-none text-3xl font-extrabold leading-normal pt-1">${seatId}</span><span class="pointer-events-none seat-name text-center w-full leading-normal pb-1 px-0.5 tracking-tight overflow-hidden font-extrabold" style="font-size: ${settings.seatingFontSize}rem">${name}</span>`;
                     }
+                    
                     cell.draggable = true; 
                     cell.dataset.row = rowIndex; 
                     cell.dataset.col = colIndex; 
                     cell.dataset.id = seatId;
                     
-                    // 新增拖曳與雙擊事件
                     cell.addEventListener('dragstart', handleGridDragStart); 
                     cell.addEventListener('dragover', handleDragOver); 
                     cell.addEventListener('dragenter', handleDragEnter); 
@@ -627,7 +680,7 @@
             });
         }
 
-        // --- Drag & Drop Variables & Handlers ---
+        // --- Drag & Drop Core Logic ---
         let dragData = { type: null, row: null, col: null, studentId: null, element: null };
 
         function handleGridDragStart(e) { 
@@ -648,7 +701,6 @@
         
         function handleSidebarDrop(e) {
             e.preventDefault();
-            // 如果是把座位表的人拖回側邊欄 -> 該座位清空
             if (dragData.type === 'grid' && dragData.studentId !== 'X') {
                 currentLayout[dragData.row][dragData.col] = 'X';
                 saveData(); 
@@ -658,11 +710,12 @@
             }
         }
 
-        function handleDragOver(e) { if (e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
+        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
         function handleDragEnter(e) { this.classList.add('scale-105', 'shadow-xl', 'border-dashed', 'border-blue-500', 'z-10'); }
         function handleDragLeave(e) { this.classList.remove('scale-105', 'shadow-xl', 'border-dashed', 'border-blue-500', 'z-10'); }
         
         function handleGridDrop(e) { 
+            e.preventDefault(); 
             if (e.stopPropagation) e.stopPropagation(); 
             this.classList.remove('scale-105', 'shadow-xl', 'border-dashed', 'border-blue-500', 'z-10');
 
@@ -671,7 +724,6 @@
 
             if (dragData.type === 'grid') {
                 if (dragData.element !== this) {
-                    // 座位互換
                     const temp = currentLayout[dragData.row][dragData.col]; 
                     currentLayout[dragData.row][dragData.col] = currentLayout[destRow][destCol]; 
                     currentLayout[destRow][destCol] = temp; 
@@ -679,8 +731,6 @@
                 }
             } else if (dragData.type === 'sidebar') {
                 const sId = parseInt(dragData.studentId);
-                
-                // 若此學生原本已在座位表上，將舊座位清空
                 for(let r=0; r<currentLayout.length; r++) {
                     for(let c=0; c<currentLayout[r].length; c++) {
                         if (currentLayout[r][c] == sId) {
@@ -688,8 +738,6 @@
                         }
                     }
                 }
-                
-                // 將學生放入新座位 (蓋掉原本的狀態)
                 currentLayout[destRow][destCol] = sId;
                 saveData(); 
                 renderGrid(); 
@@ -698,10 +746,45 @@
             }
             return false; 
         }
+
+        // --- Cadre Drag & Drop Logic ---
+        function handleCadreDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move'; // Match 'move' allowed effect
+            return false;
+        }
+        function handleCadreDragEnter(e) {
+            e.preventDefault(); // Ensure drop target is valid
+            this.classList.add('scale-105', 'shadow-md', 'border-dashed', 'border-blue-500', 'bg-blue-50');
+        }
+        function handleCadreDragLeave(e) {
+            this.classList.remove('scale-105', 'shadow-md', 'border-dashed', 'border-blue-500', 'bg-blue-50');
+        }
+        function handleCadreDrop(e) {
+            e.preventDefault(); 
+            e.stopPropagation();
+            this.classList.remove('scale-105', 'shadow-md', 'border-dashed', 'border-blue-500', 'bg-blue-50');
+            
+            const roleIndex = parseInt(this.dataset.roleIndex);
+            
+            if (dragData.studentId === 'X') {
+                roles[roleIndex].id = '';
+                roles[roleIndex].name = '';
+            } else if (dragData.studentId) {
+                const sId = parseInt(dragData.studentId);
+                roles[roleIndex].id = sId;
+                roles[roleIndex].name = students[sId] || "未知";
+            }
+            
+            saveData();
+            renderCadreCards();
+            return false;
+        }
         
         function handleDragEnd(e) { 
             this.style.opacity = '1'; 
             document.querySelectorAll('.seat').forEach(item => item.classList.remove('scale-105', 'shadow-xl', 'border-dashed', 'border-blue-500', 'z-10')); 
+            document.querySelectorAll('.cadre-card').forEach(item => item.classList.remove('scale-105', 'shadow-md', 'border-dashed', 'border-blue-500', 'bg-blue-50'));
         }
 
         function handleSeatDoubleClick(e) {
@@ -716,56 +799,32 @@
             }
         }
 
-        function clearAllSeats() {
-            if(confirm("確定要清空所有座位嗎？這將讓所有人回到待排區。")) {
-                for(let r=0; r<currentLayout.length; r++) {
-                    for(let c=0; c<currentLayout[r].length; c++) {
-                        currentLayout[r][c] = 'X';
-                    }
-                }
-                saveData();
-                renderGrid();
-                renderNameList();
-                renderCadreCards();
-            }
+        function highlightSeat(seatId) { 
+            document.querySelectorAll('.seat').forEach(el => el.classList.remove('ring-4', 'ring-yellow-400', 'scale-105', 'z-20', 'shadow-xl')); 
+            const seat = document.querySelector(`.seat[data-id="${seatId}"]`); 
+            if (seat) { 
+                seat.classList.add('ring-4', 'ring-yellow-400', 'scale-105', 'z-20', 'shadow-xl'); 
+                seat.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+            } 
         }
 
-        function highlightSeat(seatId) { document.querySelectorAll('.seat').forEach(el => el.classList.remove('ring-4', 'ring-yellow-400', 'scale-105', 'z-20', 'shadow-xl')); const seat = document.querySelector(`.seat[data-id="${seatId}"]`); if (seat) { seat.classList.add('ring-4', 'ring-yellow-400', 'scale-105', 'z-20', 'shadow-xl'); seat.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
-
-        // --- Editing Functions (Student/Role add/remove/update logic similar to previous version) ---
+        // --- Editing Functions ---
         let tempStudents = [], tempRoles = [];
-        function renderEditStudents() {
-            const tbody = document.getElementById('edit-students-body'); tbody.innerHTML = '';
-            tempStudents = Object.entries(students).map(([id, name]) => ({id: parseInt(id), name: name})).sort((a,b) => a.id - b.id);
-            tempStudents.forEach((student, index) => {
-                const tr = document.createElement('tr'); tr.className = "border-b hover:bg-gray-100";
-                tr.innerHTML = `<td class="py-2 pl-2"><input type="number" value="${student.id}" class="w-16 border rounded p-1 text-center bg-white" onchange="updateTempStudent(${index}, 'id', this.value)"></td><td class="py-2"><input type="text" value="${student.name}" class="w-full border rounded p-1 bg-white" onchange="updateTempStudent(${index}, 'name', this.value)"></td><td class="py-2 text-center"><button onclick="removeStudentRow(${index})" class="text-red-500 hover:text-red-700">刪除</button></td>`;
-                tbody.appendChild(tr);
-            });
-        }
+        function renderEditStudents() { const tbody = document.getElementById('edit-students-body'); tbody.innerHTML = ''; tempStudents = Object.entries(students).map(([id, name]) => ({id: parseInt(id), name: name})).sort((a,b) => a.id - b.id); tempStudents.forEach((student, index) => { const tr = document.createElement('tr'); tr.className = "border-b hover:bg-gray-100"; tr.innerHTML = `<td class="py-2 pl-2"><input type="number" value="${student.id}" class="w-16 border rounded p-1 text-center bg-white" onchange="updateTempStudent(${index}, 'id', this.value)"></td><td class="py-2"><input type="text" value="${student.name}" class="w-full border rounded p-1 bg-white" onchange="updateTempStudent(${index}, 'name', this.value)"></td><td class="py-2 text-center"><button onclick="removeStudentRow(${index})" class="text-red-500 hover:text-red-700">刪除</button></td>`; tbody.appendChild(tr); }); }
         function addStudentRow() { const newId = tempStudents.length > 0 ? Math.max(...tempStudents.map(s => s.id)) + 1 : 1; tempStudents.push({id: newId, name: "新同學"}); renderEditStudentsTableOnly(); }
         function removeStudentRow(index) { tempStudents.splice(index, 1); renderEditStudentsTableOnly(); }
         function updateTempStudent(index, field, value) { if (field === 'id') value = parseInt(value); tempStudents[index][field] = value; }
-        function renderEditStudentsTableOnly() { /* Re-renders just the table body */ const tbody = document.getElementById('edit-students-body'); tbody.innerHTML = ''; tempStudents.forEach((student, index) => { const tr = document.createElement('tr'); tr.className = "border-b hover:bg-gray-100"; tr.innerHTML = `<td class="py-2 pl-2"><input type="number" value="${student.id}" class="w-16 border rounded p-1 text-center bg-white" onchange="updateTempStudent(${index}, 'id', this.value)"></td><td class="py-2"><input type="text" value="${student.name}" class="w-full border rounded p-1 bg-white" onchange="updateTempStudent(${index}, 'name', this.value)"></td><td class="py-2 text-center"><button onclick="removeStudentRow(${index})" class="text-red-500 hover:text-red-700">刪除</button></td>`; tbody.appendChild(tr); }); }
+        function renderEditStudentsTableOnly() { const tbody = document.getElementById('edit-students-body'); tbody.innerHTML = ''; tempStudents.forEach((student, index) => { const tr = document.createElement('tr'); tr.className = "border-b hover:bg-gray-100"; tr.innerHTML = `<td class="py-2 pl-2"><input type="number" value="${student.id}" class="w-16 border rounded p-1 text-center bg-white" onchange="updateTempStudent(${index}, 'id', this.value)"></td><td class="py-2"><input type="text" value="${student.name}" class="w-full border rounded p-1 bg-white" onchange="updateTempStudent(${index}, 'name', this.value)"></td><td class="py-2 text-center"><button onclick="removeStudentRow(${index})" class="text-red-500 hover:text-red-700">刪除</button></td>`; tbody.appendChild(tr); }); }
 
-        function renderEditRoles() {
-            const tbody = document.getElementById('edit-roles-body'); tbody.innerHTML = '';
-            tempRoles = JSON.parse(JSON.stringify(roles));
-            tempRoles.forEach((role, index) => {
-                const tr = document.createElement('tr'); tr.className = "border-b hover:bg-gray-100";
-                const currentName = students[role.id] || role.name || "";
-                tr.innerHTML = `<td class="py-2 pl-2"><input type="text" value="${role.title}" class="w-24 border rounded p-1 bg-white" onchange="updateTempRole(${index}, 'title', this.value)"></td><td class="py-2"><input type="number" value="${role.id}" class="w-16 border rounded p-1 text-center bg-white" onchange="updateTempRole(${index}, 'id', this.value)"></td><td class="py-2 text-gray-500 text-xs">${currentName}</td><td class="py-2 text-center"><button onclick="removeRoleRow(${index})" class="text-red-500 hover:text-red-700">刪除</button></td>`;
-                tbody.appendChild(tr);
-            });
-        }
-        function addRoleRow() { tempRoles.push({title: "新職位", id: 0, name: ""}); renderEditRolesTableOnly(); }
+        function renderEditRoles() { const tbody = document.getElementById('edit-roles-body'); tbody.innerHTML = ''; tempRoles = JSON.parse(JSON.stringify(roles)); tempRoles.forEach((role, index) => { const tr = document.createElement('tr'); tr.className = "border-b hover:bg-gray-100"; const currentName = role.id ? (students[role.id] || role.name || "") : ""; tr.innerHTML = `<td class="py-2 pl-2"><input type="text" value="${role.title}" class="w-24 border rounded p-1 bg-white" onchange="updateTempRole(${index}, 'title', this.value)"></td><td class="py-2"><input type="number" value="${role.id}" class="w-16 border rounded p-1 text-center bg-white" onchange="updateTempRole(${index}, 'id', this.value)"></td><td class="py-2 text-gray-500 text-xs">${currentName}</td><td class="py-2 text-center"><button onclick="removeRoleRow(${index})" class="text-red-500 hover:text-red-700">刪除</button></td>`; tbody.appendChild(tr); }); }
+        function addRoleRow() { tempRoles.push({title: "新職位", id: "", name: ""}); renderEditRolesTableOnly(); }
         function removeRoleRow(index) { tempRoles.splice(index, 1); renderEditRolesTableOnly(); }
-        function updateTempRole(index, field, value) { if (field === 'id') value = parseInt(value); tempRoles[index][field] = value; if (field === 'id') renderEditRolesTableOnly(); }
-        function renderEditRolesTableOnly() { const tbody = document.getElementById('edit-roles-body'); tbody.innerHTML = ''; tempRoles.forEach((role, index) => { const tr = document.createElement('tr'); tr.className = "border-b hover:bg-gray-100"; let name = "未知"; const foundInTemp = tempStudents.find(s => s.id === role.id); if (foundInTemp) name = foundInTemp.name; tr.innerHTML = `<td class="py-2 pl-2"><input type="text" value="${role.title}" class="w-24 border rounded p-1 bg-white" onchange="updateTempRole(${index}, 'title', this.value)"></td><td class="py-2"><input type="number" value="${role.id}" class="w-16 border rounded p-1 text-center bg-white" onchange="updateTempRole(${index}, 'id', this.value)"></td><td class="py-2 text-gray-500 text-xs">${name}</td><td class="py-2 text-center"><button onclick="removeRoleRow(${index})" class="text-red-500 hover:text-red-700">刪除</button></td>`; tbody.appendChild(tr); }); }
+        function updateTempRole(index, field, value) { if (field === 'id') value = value ? parseInt(value) : ''; tempRoles[index][field] = value; if (field === 'id') renderEditRolesTableOnly(); }
+        function renderEditRolesTableOnly() { const tbody = document.getElementById('edit-roles-body'); tbody.innerHTML = ''; tempRoles.forEach((role, index) => { const tr = document.createElement('tr'); tr.className = "border-b hover:bg-gray-100"; let name = ""; if (role.id) { const foundInTemp = tempStudents.find(s => s.id === role.id); name = foundInTemp ? foundInTemp.name : "未知"; } tr.innerHTML = `<td class="py-2 pl-2"><input type="text" value="${role.title}" class="w-24 border rounded p-1 bg-white" onchange="updateTempRole(${index}, 'title', this.value)"></td><td class="py-2"><input type="number" value="${role.id}" class="w-16 border rounded p-1 text-center bg-white" onchange="updateTempRole(${index}, 'id', this.value)"></td><td class="py-2 text-gray-500 text-xs">${name}</td><td class="py-2 text-center"><button onclick="removeRoleRow(${index})" class="text-red-500 hover:text-red-700">刪除</button></td>`; tbody.appendChild(tr); }); }
         
         function saveEditChanges() {
             const newStudentsObj = {}; tempStudents.forEach(s => { if (s.id && s.name) { newStudentsObj[s.id] = s.name; } }); students = newStudentsObj;
-            roles = tempRoles.map(r => ({ title: r.title, id: r.id, name: students[r.id] || "" }));
+            roles = tempRoles.map(r => ({ title: r.title, id: r.id, name: r.id ? (students[r.id] || "") : "" }));
             saveData(); renderNameList(); renderGrid(); renderCadreCards(); closeEditModal();
         }
     </script>
